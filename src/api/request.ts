@@ -1,6 +1,7 @@
 import { ElLoading, ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { env } from '@/utils/env'
+import LocalStorage from '@/utils/storage'
 
 // 定义请求选项类型
 interface RequestOptions {

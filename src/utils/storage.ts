@@ -100,7 +100,7 @@ class LocalStorage {
    * @param callback 回调函数
    */
   static once<T>(key: string, callback: (value: T | null) => void): void {
-    const off = this.on(key, (value) => {
+    const off = this.on<T>(key, (value) => {
       off()
       callback(value)
     })
