@@ -3,16 +3,16 @@
  */
 export const env = {
   // 应用标题
-  title: import.meta.env.VITE_APP_TITLE,
+  title: '权限管理系统',
 
-  // API基础地址
-  apiBaseUrl: import.meta.env.VITE_APP_API_BASE_URL,
+  // API基础地址 - 使用当前域名作为根目录地址
+  apiBaseUrl: '', // 空字符串表示相对当前域名请求
 
   // 请求超时时间
-  timeout: import.meta.env.VITE_APP_TIMEOUT,
+  timeout: 10000,
 
   // Token存储Key
-  tokenKey: import.meta.env.VITE_APP_TOKEN_KEY,
+  tokenKey: 'auth_token',
 
   // 当前环境
   isDev: import.meta.env.DEV,
