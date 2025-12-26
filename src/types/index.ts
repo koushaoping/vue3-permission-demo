@@ -4,6 +4,7 @@ export interface MenuItem {
   name: string
   title: string
   icon?: string
+  component?: string // 用于动态加载组件的文件名或相对路径
   permission?: string[]
   children?: MenuItem[]
 }

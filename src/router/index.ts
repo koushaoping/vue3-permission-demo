@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { usePermissionStore } from '@/stores/permission'
 import { env } from '@/utils/env'
+import { asyncRoutes } from './asyncRoutes'
+import { MenuItem } from '@/types'
 
 
 // 导入布局组件
@@ -19,79 +21,12 @@ const router = createRouter({
       component: () => import('../views/LoginView.vue'),
       meta: { requiresAuth: false }
     },
-    // 带布局的路由
+    // 带布局的路由（动态子路由将注册到 name: 'layout' 下）
     {
       path: '/',
+      name: 'layout',
       component: Layout,
-      meta: { requiresAuth: true },
-      children: [
-        {
-          path: 'home',
-          name: 'home',
-          component: () => import('../views/HomeView.vue'),
-          meta: { title: '首页', permission: ['page.home'] }
-        },
-        {
-          path: 'admin',
-          name: 'admin',
-          component: () => import('../views/AdminView.vue'),
-          meta: { title: '管理员管理', permission: ['page.admin'] }
-        },
-        {
-          path: 'system/menu',
-          name: 'menu',
-          component: () => import('../views/system/MenuView.vue'),
-          meta: { title: '菜单管理', permission: ['page.system.menu'] }
-        },
-        {
-          path: 'system/role',
-          name: 'role',
-          component: () => import('../views/system/RoleView.vue'),
-          meta: { title: '角色管理', permission: ['page.system.role'] }
-        },
-        {
-          path: 'system/user',
-          name: 'user',
-          component: () => import('../views/system/UserView.vue'),
-          meta: { title: '用户管理', permission: ['page.system.user'] }
-        },
-        {
-          path: 'system/log',
-          name: 'log',
-          component: () => import('../views/system/LogView.vue'),
-          meta: { title: '日志管理', permission: ['page.system.log'] }
-        },
-        // {
-        //   path: 'system/config',
-        //   name: 'config',
-        //   component: () => import('../views/system/ConfigView.vue'),
-        //   meta: { title: '参数配置', permission: ['page.system.config'] }
-        // },
-        // {
-        //   path: 'system/dict',
-        //   name: 'dict',
-        //   component: () => import('../views/system/DictView.vue'),
-        //   meta: { title: '字典管理', permission: ['page.system.dict'] }
-        // },
-        {
-          path: 'tools',
-          name: 'tools',
-          component: () => import('../views/ToolsView.vue'),
-          meta: { title: '工具管理', permission: ['page.tools'] }
-        },
-        {
-          path: 'dashboard',
-          name: 'dashboard',
-          component: () => import('../views/DashboardView.vue'),
-          meta: { title: '数据看板', permission: ['page.dashboard'] }
-        },
-        {
-          path: '/user',
-          name: 'userManage',
-          component: () => import('../views/UserManageView.vue'),
-          meta: { title: '用户中心', permission: ['page.user'] }
-        }
-      ]
+      meta: { requiresAuth: true }
     },
     {
       path: '/403',
@@ -105,6 +40,69 @@ const router = createRouter({
     }
   ]
 })
+
+// 按权限筛选并注册异步路由到 layout 下
+// 从后端菜单生成路由并注册
+export function registerAsyncRoutesFromMenu(menus: MenuItem[] = [], permissions: string[] = []) {
+  const hasPermission = (meta?: any) => {
+    if (!meta || !meta.permission) return true
+    const perms = meta.permission
+    if (Array.isArray(perms)) return perms.some((p: string) => permissions.includes(p))
+    return permissions.includes(perms)
+  }
+
+
+  const modules = import.meta.glob('../views/**/*.vue')
+
+  const getComponentByName = (comp?: string) => {
+    if (!comp) return null
+    const key = Object.keys(modules).find(k => k.endsWith(comp))
+    return key ? modules[key] : null
+  }
+
+  const routes: any[] = []
+
+  const traverse = (items: MenuItem[]) => {
+    items.forEach(item => {
+      if (item.children && item.children.length) {
+        traverse(item.children)
+      } else {
+        if (!hasPermission(item.permission)) return
+        // 先尝试通过 menu.component 字段解析组件
+        let comp: any = null
+        if (item.component) comp = getComponentByName(item.component)
+        // 回退：尝试按约定从 views 中查找对应文件名
+        if (!comp) {
+          // 构造可能的文件名，例如 '/home' -> 'HomeView.vue'
+          const parts = item.path.split('/').filter(Boolean)
+          const guess = parts.length ? `${parts[parts.length - 1].replace(/-([a-z])/g, (_, c) => c.toUpperCase())}View.vue` : ''
+          comp = getComponentByName(guess)
+        }
+        if (!comp) return // 未找到组件则跳过注册
+
+        const route = {
+          path: item.path.replace(/^\//, ''),
+          name: item.name,
+          component: comp,
+          meta: { title: item.title, permission: item.permission }
+        }
+        routes.push(route)
+      }
+    })
+  }
+
+  traverse(menus)
+
+  routes.forEach(r => {
+    try {
+      router.addRoute('layout', r)
+    } catch (e) {
+      // 忽略重复添加
+    }
+  })
+}
+
+export { asyncRoutes }
 
 // 路由守卫（保持原有逻辑）
 router.beforeEach((to, from, next) => {

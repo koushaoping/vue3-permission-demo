@@ -37,11 +37,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { MenuItem } from '@/types'
+import { usePermissionStore } from '@/stores/permission'
 
-// 菜单列表（实际项目中可从接口获取）
-const menuList = ref<MenuItem[]>([
+
+const defaultMenu: MenuItem[] = [
   {
     path: '/home',
     name: 'home',
@@ -115,7 +116,10 @@ const menuList = ref<MenuItem[]>([
     icon: 'DataBoard',
     permission: ['page.dashboard']
   }
-])
+]
+
+const permissionStore = usePermissionStore()
+const menuList = computed(() => permissionStore.userMenus.length ? permissionStore.userMenus : defaultMenu)
 </script>
 
 <style scoped>

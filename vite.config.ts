@@ -27,7 +27,7 @@ export default defineConfig({
     proxy: {
       // 匹配所有以 '/api' 开头的请求
       '/api': {
-        target: 'http://localhost:3000', // 开发环境接口地址
+        target: 'https://43vk7485hx48.vicp.fun', // 开发环境接口地址
         changeOrigin: true, // 跨域时需要设置
         rewrite: (path) => path.replace(/^\/api/, '') // 去掉路径中的 '/api' 前缀
       }

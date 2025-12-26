@@ -28,6 +28,9 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { usePermissionStore } from '@/stores/permission'
+import { registerAsyncRoutesFromMenu } from '@/router'
+import { fetchMenuByRole } from '@/api/menu'
+import storage from '@/utils/storage'
 
 const router = useRouter()
 const route = useRoute()
@@ -90,16 +93,22 @@ const handleLogin = () => {
   // 模拟登录验证
   if (loginForm.value.username && loginForm.value.password) {
     // 设置权限
-    permissionStore.setPermissions(
-      permissionConfig[loginForm.value.role as keyof typeof permissionConfig],
-      loginForm.value.role
-    )
+    const perms = permissionConfig[loginForm.value.role as keyof typeof permissionConfig]
+    permissionStore.setPermissions(perms, loginForm.value.role)
 
+    // 请求菜单并注册动态路由（模拟接口）
+    fetchMenuByRole(loginForm.value.role).then(menus => {
+      permissionStore.setMenus(menus)
+      // 持久化菜单与权限，刷新可恢复
+      storage.setItem('userMenus', menus)
+      storage.setItem('userPermissions', perms)
+      storage.setItem('userRole', loginForm.value.role)
+      registerAsyncRoutesFromMenu(menus, perms)
+      // 登录后跳转
+      const redirect = route.query.redirect as string || '/home'
+      router.push(redirect)
+    })
     ElMessage.success('登录成功')
-
-    // 跳转到之前的页面或首页
-    const redirect = route.query.redirect as string || '/home'
-    router.push(redirect)
   } else {
     ElMessage.error('用户名或密码错误')
   }
